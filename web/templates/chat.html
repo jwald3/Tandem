@@ -1,0 +1,138 @@
+{{define "chat.html"}}{{template "head" .}}
+  <main class="chat-page">
+    <!-- Left: conversations -->
+    <aside class="chat-side" id="chat-side">
+      <a href="/" class="btn new-chat">{{icon "plus"}} New chat</a>
+      {{template "thread_list.html" .ThreadList}}
+      <div class="chat-side-foot">
+        <button type="button" class="btn ghost small side-key" title="API key & settings"
+                onclick="document.getElementById('settings-wrap').classList.toggle('open')">{{icon "key"}} API key</button>
+        <div id="settings-wrap"{{if not .ChatEnabled}} class="open"{{end}}>
+          {{template "settings.html" .Settings}}
+        </div>
+      </div>
+    </aside>
+
+    <!-- Middle: the conversation -->
+    <section class="chat-main">
+      <div class="chat-head">
+        <button type="button" class="btn ghost small side-toggle" title="Conversations"
+                onclick="document.getElementById('chat-side').classList.toggle('open')" aria-label="Conversations">{{icon "menu"}}</button>
+        <h1 class="chat-title">{{if .Thread}}{{.Thread.Title}}{{else}}New chat{{end}}</h1>
+        {{if not .ChatEnabled}}<span class="tag off">key needed</span>{{end}}
+      </div>
+
+      <div id="chat-scroll" class="chat-scroll">
+        <div class="chat-col" id="chat-col">
+          {{range .Messages}}
+            {{if .Pending}}
+              <div class="bubble assistant pending"
+                   hx-get="/chat/msg/{{.ID}}" hx-trigger="load delay:1500ms"
+                   hx-swap="outerHTML" hx-target="this">
+                <span class="typing"><i></i><i></i><i></i></span></div>
+            {{else if .Errored}}
+              {{errorbubble .}}
+            {{else}}
+              <div class="bubble {{.Role}} md">{{if eq .Role "assistant"}}{{.Content | md}}{{else}}{{imgs .Images}}{{.Content | nl2br}}{{end}}</div>
+            {{end}}
+          {{else}}
+            <div class="chat-empty">
+              <div class="chat-hello">What can I take off your plate?</div>
+              {{if .ChatEnabled}}
+                <div class="starters">
+                  <button type="button" class="starter">What's on my plate this week?</button>
+                  <button type="button" class="starter">Remind me to call the dentist Thursday at 10am</button>
+                  <button type="button" class="starter">Add my coworker Alex Rivera. I'm meeting him Monday about Atlas</button>
+                  <button type="button" class="starter">Who haven't I talked to in a while?</button>
+                  <button type="button" class="starter starter-photo">Send a photo of a business card</button>
+                </div>
+              {{else}}
+                <div class="chat-empty-note">Add your Anthropic API key (the API key button, bottom left) to chat with Tandem. The other tabs work without one.</div>
+              {{end}}
+            </div>
+          {{end}}
+        </div>
+      </div>
+
+      <div class="composer-wrap">
+        <form class="composer" id="chat-form"
+              hx-post="/chat" hx-target="#chat-col" hx-swap="beforeend" hx-encoding="multipart/form-data"
+              {{if not .ChatEnabled}}data-disabled="1"{{end}}>
+          <input type="hidden" name="thread_id" id="thread-id" value="{{if .Thread}}{{.Thread.ID}}{{end}}">
+          <input type="file" name="images" id="chat-files" accept="image/*" multiple hidden>
+          <div id="chat-previews" class="chat-previews" hidden></div>
+          <div class="composer-row">
+            <button type="button" class="btn ghost small attach" id="chat-attach" title="Attach a photo" aria-label="Attach a photo" {{if not .ChatEnabled}}disabled{{end}}>{{icon "image"}}</button>
+            <textarea name="message" id="chat-input" rows="1" placeholder="Tell Tandem what to remember…" autocomplete="off" {{if not .ChatEnabled}}disabled{{end}} autofocus>{{.Prompt}}</textarea>
+            <button type="submit" class="btn primary send" title="Send (Enter)" aria-label="Send" {{if not .ChatEnabled}}disabled{{end}}>{{icon "arrow-up"}}</button>
+          </div>
+        </form>
+        <div class="composer-hint">Enter to send · Shift+Enter for a new line · paste or attach photos</div>
+      </div>
+    </section>
+
+    <!-- Right: what's due -->
+    <aside class="chat-agenda" aria-label="Agenda">
+      {{template "agenda.html" .Agenda}}
+    </aside>
+  </main>
+{{template "foot" .}}{{end}}
+
+{{define "thread_list.html"}}
+<nav id="thread-list" class="thread-list"{{if .OOB}} hx-swap-oob="true"{{end}}>
+  {{$active := .ActiveID}}
+  {{range .Threads}}
+    <div class="thread{{if eq .ID $active}} active{{end}}">
+      <a href="/c/{{.ID}}" class="thread-link" title="{{.Title}}">{{.Title}}</a>
+      <div class="thread-actions">
+        <button type="button" class="btn tiny ghost thread-rename" title="Rename"
+                data-id="{{.ID}}" data-title="{{.Title}}" data-current="{{$active}}" aria-label="Rename">{{icon "pencil"}}</button>
+        <button type="button" class="btn tiny ghost" title="Delete"
+                hx-post="/threads/{{.ID}}/delete" hx-vals='{"current": "{{$active}}"}'
+                hx-target="#thread-list" hx-swap="outerHTML"
+                hx-confirm="Delete this conversation?" aria-label="Delete">{{icon "trash"}}</button>
+      </div>
+    </div>
+  {{else}}
+    <div class="thread-empty">No conversations yet.</div>
+  {{end}}
+</nav>
+{{end}}
+
+{{/* The agenda panel. It reloads itself whenever a chat reply changed data. */}}
+{{define "agenda.html"}}
+<div id="agenda" class="agenda" hx-get="/agenda" hx-trigger="data-changed from:body" hx-swap="outerHTML">
+  <div class="agenda-head">
+    <h2 class="panel-title">Agenda</h2>
+    <a href="/reminders" class="agenda-all">All reminders</a>
+  </div>
+  {{if .Empty}}
+    <div class="empty small">Nothing due in the next week.</div>
+  {{end}}
+  {{if .Overdue}}{{template "agenda_group" (group "Overdue" .Overdue)}}{{end}}
+  {{if .Today}}{{template "agenda_group" (group "Today" .Today)}}{{end}}
+  {{if .Upcoming}}{{template "agenda_group" (group "Next 7 days" .Upcoming)}}{{end}}
+  {{if .Later}}<div class="agenda-later">+ {{.Later}} later or undated</div>{{end}}
+</div>
+{{end}}
+
+{{/* A titled run of reminders; pass (group "Title" $reminders). */}}
+{{define "agenda_group"}}
+<div class="agenda-group{{if eq .Title "Overdue"}} overdue{{end}}">
+  <h3 class="agenda-label">{{.Title}}</h3>
+  {{range .Items}}
+    <div class="agenda-item">
+      <button type="button" class="check" title="Mark done" aria-label="Mark {{.Title}} done"
+              hx-post="/reminders/{{.ID}}/toggle" hx-target="#agenda" hx-swap="outerHTML"></button>
+      <div class="agenda-body">
+        <div class="agenda-title">{{.Title}}</div>
+        <div class="agenda-meta">
+          {{if not (isToday .DueDate)}}<span class="{{if .Overdue}}due-late{{end}}">{{rel .DueDate}}</span>{{end}}
+          {{if .DueTime}}<span>{{clock .DueTime}}</span>{{end}}
+          {{template "contact_link" .}}
+        </div>
+      </div>
+    </div>
+  {{end}}
+</div>
+{{end}}

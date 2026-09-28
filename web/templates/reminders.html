@@ -1,0 +1,108 @@
+{{define "reminders.html"}}{{template "head" .}}
+  <main class="page">
+    <div class="page-inner">
+      <div class="page-head">
+        <h1 class="page-title">Reminders</h1>
+        <nav class="subtabs">
+          <a href="/reminders" class="subtab{{if eq .View "open"}} active{{end}}">Open</a>
+          <a href="/reminders?view=done" class="subtab{{if eq .View "done"}} active{{end}}">Completed</a>
+        </nav>
+      </div>
+
+      {{if eq .View "open"}}
+        <section class="panel">
+          {{template "reminder_form" (row nil .Contacts .Next)}}
+        </section>
+
+        {{$c := .Contacts}}{{$n := .Next}}
+        {{if .Overdue}}
+          <section class="group overdue">
+            <h2 class="group-title">Overdue</h2>
+            {{range .Overdue}}{{template "reminder_row" (row . $c $n)}}{{end}}
+          </section>
+        {{end}}
+        {{range .Days}}
+          <section class="group by-day">
+            <h2 class="group-title">{{if isToday .Date}}Today{{else}}{{pretty .Date}} <span class="group-sub">{{rel .Date}}</span>{{end}}</h2>
+            {{range .Items}}{{template "reminder_row" (row . $c $n)}}{{end}}
+          </section>
+        {{end}}
+        {{if .NoDate}}
+          <section class="group">
+            <h2 class="group-title">No date</h2>
+            {{range .NoDate}}{{template "reminder_row" (row . $c $n)}}{{end}}
+          </section>
+        {{end}}
+        {{if not (or .Overdue .Days .NoDate)}}
+          <div class="empty-big">Nothing to do. Add a reminder above, or just tell the assistant.</div>
+        {{end}}
+      {{else}}
+        {{$c := .Contacts}}{{$n := .Next}}
+        <section class="group">
+          {{range .Done}}{{template "reminder_row" (row . $c $n)}}{{else}}<div class="empty-big">No completed reminders yet.</div>{{end}}
+        </section>
+      {{end}}
+    </div>
+  </main>
+{{template "foot" .}}{{end}}
+
+{{/* New-reminder form. Pass (row $contactIDOrNil $contacts $next); when .I is a
+     contact id the picker is preset (used on a contact's page). */}}
+{{define "reminder_form"}}
+<form class="stack-form" method="post" action="/reminders">
+  <input type="hidden" name="next" value="{{.Next}}">
+  <div class="form-row">
+    <input type="text" name="title" placeholder="Remind me to…" required aria-label="Reminder">
+  </div>
+  <div class="form-row">
+    <input type="date" name="due_date" aria-label="Due date">
+    <input type="time" name="due_time" aria-label="Time (optional)">
+    {{if .I}}<input type="hidden" name="contact_id" value="{{.I}}">{{else}}{{template "contact_select" (picker .Contacts 0)}}{{end}}
+  </div>
+  <div class="form-row">
+    <input type="text" name="notes" placeholder="Notes (optional)" aria-label="Notes">
+    <button type="submit" class="btn primary">{{icon "plus"}} Add reminder</button>
+  </div>
+</form>
+{{end}}
+
+{{/* One reminder with its done toggle, details, and an inline edit form. */}}
+{{define "reminder_row"}}{{$r := .I}}
+<div class="item reminder{{if $r.Done}} done{{end}}{{if $r.Overdue}} late{{end}}">
+  <form method="post" action="/reminders/{{$r.ID}}/toggle" class="item-check">
+    <input type="hidden" name="next" value="{{.Next}}">
+    <button type="submit" class="check{{if $r.Done}} on{{end}}" title="{{if $r.Done}}Reopen{{else}}Mark done{{end}}"
+            aria-label="{{if $r.Done}}Reopen{{else}}Mark done{{end}}: {{$r.Title}}">{{if $r.Done}}{{icon "check"}}{{end}}</button>
+  </form>
+  <div class="item-body">
+    <div class="item-title">{{$r.Title}}</div>
+    <div class="item-meta">
+      {{if $r.DueDate}}<span class="due-date{{if $r.Overdue}} due-late{{end}}">{{icon "calendar"}} {{pretty $r.DueDate}}</span>{{end}}
+      {{if $r.DueTime}}<span class="due-time">{{icon "clock"}} {{clock $r.DueTime}}</span>{{end}}
+      {{template "contact_link" $r}}
+      {{if $r.Done}}<span>done {{day $r.DoneAt}}</span>{{end}}
+    </div>
+    {{if $r.Notes}}<div class="item-notes">{{nl2br $r.Notes}}</div>{{end}}
+  </div>
+  <div class="item-actions">
+    <details class="edit">
+      <summary class="btn tiny ghost" title="Edit" aria-label="Edit">{{icon "pencil"}}</summary>
+      <form class="stack-form edit-form" method="post" action="/reminders/{{$r.ID}}">
+        <input type="hidden" name="next" value="{{.Next}}">
+        <input type="text" name="title" value="{{$r.Title}}" required aria-label="Title">
+        <div class="form-row">
+          <input type="date" name="due_date" value="{{$r.DueDate}}" aria-label="Due date">
+          <input type="time" name="due_time" value="{{$r.DueTime}}" aria-label="Time">
+        </div>
+        {{template "contact_select" (picker .Contacts $r.ContactID)}}
+        <input type="text" name="notes" value="{{$r.Notes}}" placeholder="Notes" aria-label="Notes">
+        <button type="submit" class="btn primary small">Save</button>
+      </form>
+    </details>
+    <form method="post" action="/reminders/{{$r.ID}}/delete" data-confirm="Delete this reminder?">
+      <input type="hidden" name="next" value="{{.Next}}">
+      <button type="submit" class="btn tiny ghost" title="Delete" aria-label="Delete">{{icon "trash"}}</button>
+    </form>
+  </div>
+</div>
+{{end}}

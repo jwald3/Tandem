@@ -1,0 +1,63 @@
+{{define "notes.html"}}{{template "head" .}}
+  <main class="page">
+    <div class="page-inner">
+      <div class="page-head">
+        <h1 class="page-title">Notes</h1>
+        {{template "list_filter" .}}
+      </div>
+
+      <section class="panel">
+        {{template "note_form" (row nil .Contacts .Next)}}
+      </section>
+
+      <section class="group">
+        {{$c := .Contacts}}{{$n := .Next}}
+        {{range .Items}}{{template "note_row" (row . $c $n)}}{{else}}
+          <div class="empty-big">{{if or .Query .ContactID}}Nothing matches.{{else}}No notes yet.{{end}}</div>
+        {{end}}
+      </section>
+    </div>
+  </main>
+{{template "foot" .}}{{end}}
+
+{{/* Pass (row $contactIDOrNil $contacts $next). */}}
+{{define "note_form"}}
+<form class="stack-form" method="post" action="/notes">
+  <input type="hidden" name="next" value="{{.Next}}">
+  <div class="form-row">
+    <input type="text" name="title" placeholder="Title or topic (optional)" aria-label="Title">
+    {{if .I}}<input type="hidden" name="contact_id" value="{{.I}}">{{else}}{{template "contact_select" (picker .Contacts 0)}}{{end}}
+  </div>
+  <textarea name="body" rows="3" placeholder="Write a note…" required aria-label="Note"></textarea>
+  <div class="form-row form-foot"><button type="submit" class="btn primary">{{icon "plus"}} Save note</button></div>
+</form>
+{{end}}
+
+{{define "note_row"}}{{$note := .I}}
+<div class="item note">
+  <div class="item-body">
+    <div class="item-meta top">
+      {{if $note.Title}}<span class="note-title">{{$note.Title}}</span>{{end}}
+      {{template "contact_link" $note}}
+      <span>{{pretty (day $note.UpdatedAt)}}</span>
+    </div>
+    <div class="item-text">{{nl2br $note.Body}}</div>
+  </div>
+  <div class="item-actions">
+    <details class="edit">
+      <summary class="btn tiny ghost" title="Edit" aria-label="Edit">{{icon "pencil"}}</summary>
+      <form class="stack-form edit-form" method="post" action="/notes/{{$note.ID}}">
+        <input type="hidden" name="next" value="{{.Next}}">
+        <input type="text" name="title" value="{{$note.Title}}" placeholder="Title" aria-label="Title">
+        {{template "contact_select" (picker .Contacts $note.ContactID)}}
+        <textarea name="body" rows="5" required aria-label="Note">{{$note.Body}}</textarea>
+        <button type="submit" class="btn primary small">Save</button>
+      </form>
+    </details>
+    <form method="post" action="/notes/{{$note.ID}}/delete" data-confirm="Delete this note?">
+      <input type="hidden" name="next" value="{{.Next}}">
+      <button type="submit" class="btn tiny ghost" title="Delete" aria-label="Delete">{{icon "trash"}}</button>
+    </form>
+  </div>
+</div>
+{{end}}

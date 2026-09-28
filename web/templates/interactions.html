@@ -1,0 +1,79 @@
+{{define "interactions.html"}}{{template "head" .}}
+  <main class="page">
+    <div class="page-inner">
+      <div class="page-head">
+        <h1 class="page-title">Interactions</h1>
+        {{template "list_filter" .}}
+      </div>
+
+      <section class="panel">
+        {{template "interaction_form" (row nil .Contacts .Next)}}
+      </section>
+
+      <section class="group">
+        {{$c := .Contacts}}{{$n := .Next}}
+        {{range .Items}}{{template "interaction_row" (row . $c $n)}}{{else}}
+          <div class="empty-big">{{if or .Query .ContactID}}Nothing matches.{{else}}No interactions yet. Log a meeting, call or email above.{{end}}</div>
+        {{end}}
+      </section>
+    </div>
+  </main>
+{{template "foot" .}}{{end}}
+
+{{/* Search + contact filter shared by the interactions and notes pages. */}}
+{{define "list_filter"}}
+<form class="search-form" method="get" role="search">
+  <input type="search" name="q" value="{{.Query}}" placeholder="Search…" aria-label="Search">
+  <select name="contact" aria-label="Filter by contact" onchange="this.form.submit()">
+    <option value="">Everyone</option>
+    {{$sel := .ContactID}}
+    {{range .Contacts}}<option value="{{.ID}}"{{if eq .ID $sel}} selected{{end}}>{{.Name}}</option>{{end}}
+  </select>
+</form>
+{{end}}
+
+{{/* Pass (row $contactIDOrNil $contacts $next). */}}
+{{define "interaction_form"}}
+<form class="stack-form" method="post" action="/interactions">
+  <input type="hidden" name="next" value="{{.Next}}">
+  <div class="form-row">
+    <input type="date" name="date" aria-label="Date" value="">
+    <select name="kind" aria-label="Kind">{{range .Kinds}}<option value="{{.}}"{{if eq . "meeting"}} selected{{end}}>{{.}}</option>{{end}}</select>
+    {{if .I}}<input type="hidden" name="contact_id" value="{{.I}}">{{else}}{{template "contact_select" (picker .Contacts 0)}}{{end}}
+  </div>
+  <textarea name="summary" rows="2" placeholder="What happened? (date defaults to today)" required aria-label="Summary"></textarea>
+  <div class="form-row form-foot"><button type="submit" class="btn primary">{{icon "plus"}} Log it</button></div>
+</form>
+{{end}}
+
+{{define "interaction_row"}}{{$i := .I}}
+<div class="item interaction">
+  <div class="item-body">
+    <div class="item-meta top">
+      <span class="kind-tag kind-{{$i.Kind}}">{{$i.Kind}}</span>
+      <span title="{{weekday $i.Date}}">{{pretty $i.Date}}</span>
+      {{template "contact_link" $i}}
+    </div>
+    <div class="item-text">{{nl2br $i.Summary}}</div>
+  </div>
+  <div class="item-actions">
+    <details class="edit">
+      <summary class="btn tiny ghost" title="Edit" aria-label="Edit">{{icon "pencil"}}</summary>
+      <form class="stack-form edit-form" method="post" action="/interactions/{{$i.ID}}">
+        <input type="hidden" name="next" value="{{.Next}}">
+        <div class="form-row">
+          <input type="date" name="date" value="{{$i.Date}}" required aria-label="Date">
+          <select name="kind" aria-label="Kind">{{range .Kinds}}<option value="{{.}}"{{if eq . $i.Kind}} selected{{end}}>{{.}}</option>{{end}}</select>
+        </div>
+        {{template "contact_select" (picker .Contacts $i.ContactID)}}
+        <textarea name="summary" rows="3" required aria-label="Summary">{{$i.Summary}}</textarea>
+        <button type="submit" class="btn primary small">Save</button>
+      </form>
+    </details>
+    <form method="post" action="/interactions/{{$i.ID}}/delete" data-confirm="Delete this interaction?">
+      <input type="hidden" name="next" value="{{.Next}}">
+      <button type="submit" class="btn tiny ghost" title="Delete" aria-label="Delete">{{icon "trash"}}</button>
+    </form>
+  </div>
+</div>
+{{end}}

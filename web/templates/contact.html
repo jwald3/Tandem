@@ -1,0 +1,86 @@
+{{define "contact.html"}}{{template "head" .}}
+  {{$c := .Contact}}{{$all := .Contacts}}{{$n := .Next}}
+  <main class="page">
+    <div class="page-inner wide">
+      <a href="/contacts" class="back">{{icon "arrow-left"}} Contacts</a>
+
+      <div class="profile">
+        <span class="avatar big" aria-hidden="true">{{initials $c.Name}}</span>
+        <div class="profile-main">
+          <h1 class="page-title">{{$c.Name}}</h1>
+          {{with $c.Subtitle}}<div class="profile-sub">{{.}}</div>{{end}}
+          <div class="profile-facts">
+            {{if $c.Email}}<span>{{icon "mail"}} {{$c.Email}}</span>{{end}}
+            {{if $c.Phone}}<span>{{icon "phone"}} {{$c.Phone}}</span>{{end}}
+            {{if $c.Birthday}}<span>{{icon "cake"}} {{$c.Birthday}}</span>{{end}}
+          </div>
+          {{if $c.About}}<p class="profile-about">{{nl2br $c.About}}</p>{{end}}
+        </div>
+        <div class="profile-actions">
+          <a class="btn small" href="/?prompt={{printf "What should I know before my next conversation with %s?" $c.Name}}">{{icon "sparkles"}} Ask Tandem</a>
+        </div>
+      </div>
+
+      <details class="panel add-box">
+        <summary>{{icon "pencil"}} Edit details</summary>
+        <form class="stack-form" method="post" action="/contacts/{{$c.ID}}">
+          <div class="form-row">
+            <label class="field">Name<input type="text" name="name" value="{{$c.Name}}" required></label>
+            <label class="field">Relationship<input type="text" name="relationship" value="{{$c.Relationship}}" list="relationships"></label>
+          </div>
+          <div class="form-row">
+            <label class="field">Company<input type="text" name="company" value="{{$c.Company}}"></label>
+            <label class="field">Title / role<input type="text" name="title" value="{{$c.Title}}"></label>
+          </div>
+          <div class="form-row">
+            <label class="field">Email<input type="text" name="email" value="{{$c.Email}}" inputmode="email"></label>
+            <label class="field">Phone<input type="text" name="phone" value="{{$c.Phone}}" inputmode="tel"></label>
+            <label class="field">Birthday<input type="text" name="birthday" value="{{$c.Birthday}}" placeholder="YYYY-MM-DD"></label>
+          </div>
+          <label class="field">About<textarea name="about" rows="2">{{$c.About}}</textarea></label>
+          <div class="form-row form-foot">
+            <button type="submit" class="btn primary">Save</button>
+            <button type="submit" class="btn ghost danger" formaction="/contacts/{{$c.ID}}/delete" formnovalidate
+                    data-confirm="Delete {{$c.Name}}? Their reminders, interactions and notes are kept, just unlinked.">{{icon "trash"}} Delete contact</button>
+          </div>
+        </form>
+      </details>
+      {{template "relationship_list"}}
+
+      <div class="contact-grid">
+        <section class="panel">
+          <div class="panel-titlebar"><h2 class="panel-title">{{icon "bell"}} Reminders</h2></div>
+          <details class="add-inline">
+            <summary>{{icon "plus"}} Add reminder</summary>
+            {{template "reminder_form" (row $c.ID $all $n)}}
+          </details>
+          {{range .Open}}{{template "reminder_row" (row . $all $n)}}{{else}}<div class="empty small">No open reminders.</div>{{end}}
+          {{if .Done}}
+            <details class="done-list">
+              <summary>Completed ({{len .Done}})</summary>
+              {{range .Done}}{{template "reminder_row" (row . $all $n)}}{{end}}
+            </details>
+          {{end}}
+        </section>
+
+        <section class="panel">
+          <div class="panel-titlebar"><h2 class="panel-title">{{icon "message"}} Interactions</h2></div>
+          <details class="add-inline">
+            <summary>{{icon "plus"}} Log interaction</summary>
+            {{template "interaction_form" (row $c.ID $all $n)}}
+          </details>
+          {{range .Interactions}}{{template "interaction_row" (row . $all $n)}}{{else}}<div class="empty small">No interactions logged.</div>{{end}}
+        </section>
+
+        <section class="panel">
+          <div class="panel-titlebar"><h2 class="panel-title">{{icon "file-text"}} Notes</h2></div>
+          <details class="add-inline">
+            <summary>{{icon "plus"}} Add note</summary>
+            {{template "note_form" (row $c.ID $all $n)}}
+          </details>
+          {{range .Notes}}{{template "note_row" (row . $all $n)}}{{else}}<div class="empty small">No notes.</div>{{end}}
+        </section>
+      </div>
+    </div>
+  </main>
+{{template "foot" .}}{{end}}

@@ -1,0 +1,54 @@
+{{define "contacts.html"}}{{template "head" .}}
+  <main class="page">
+    <div class="page-inner">
+      <div class="page-head">
+        <h1 class="page-title">Contacts <span class="count">{{.Total}}</span></h1>
+        <form class="search-form" method="get" action="/contacts" role="search">
+          <input type="search" name="q" value="{{.Query}}" placeholder="Search name, company, role…" aria-label="Search contacts">
+        </form>
+      </div>
+
+      <details class="panel add-box"{{if not .Total}} open{{end}}>
+        <summary>{{icon "plus"}} Add a contact</summary>
+        <form class="stack-form" method="post" action="/contacts">
+          <div class="form-row">
+            <input type="text" name="name" placeholder="Full name" required aria-label="Name">
+            <input type="text" name="relationship" placeholder="Relationship (coworker, friend…)" aria-label="Relationship" list="relationships">
+          </div>
+          <div class="form-row">
+            <input type="text" name="company" placeholder="Company" aria-label="Company">
+            <input type="text" name="title" placeholder="Title / role" aria-label="Title">
+            <button type="submit" class="btn primary">Add</button>
+          </div>
+        </form>
+      </details>
+      {{template "relationship_list"}}
+
+      <section class="contact-list">
+        {{range .Contacts}}
+          <a class="contact-row" href="/contacts/{{.ID}}">
+            <span class="avatar" aria-hidden="true">{{initials .Name}}</span>
+            <span class="contact-main">
+              <span class="contact-name">{{.Name}}</span>
+              {{with .Subtitle}}<span class="contact-sub">{{.}}</span>{{end}}
+            </span>
+            <span class="contact-facts">
+              {{if .NextDue}}<span title="Next reminder">{{icon "bell"}} {{rel .NextDue}}</span>
+              {{else if .OpenReminders}}<span title="Open reminders">{{icon "bell"}} {{.OpenReminders}}</span>{{end}}
+              {{if .LastInteraction}}<span title="Last interaction">{{icon "message"}} {{rel .LastInteraction}}</span>{{end}}
+            </span>
+          </a>
+        {{else}}
+          <div class="empty-big">{{if .Query}}No contacts match “{{.Query}}”.{{else}}No contacts yet. Add one above, or tell the assistant about someone.{{end}}</div>
+        {{end}}
+      </section>
+    </div>
+  </main>
+{{template "foot" .}}{{end}}
+
+{{define "relationship_list"}}
+<datalist id="relationships">
+  <option value="coworker"></option><option value="manager"></option><option value="client"></option>
+  <option value="friend"></option><option value="family"></option><option value="neighbor"></option>
+</datalist>
+{{end}}

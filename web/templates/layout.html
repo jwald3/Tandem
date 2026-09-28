@@ -1,0 +1,43 @@
+{{define "head"}}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tandem{{if .PageTitle}} — {{.PageTitle}}{{end}}</title>
+  <link rel="stylesheet" href="/static/style.css?v={{assetver}}">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/app.js?v={{assetver}}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a href="/" class="brand">
+      <span class="brand-mark">{{icon "bike"}}</span>
+      <span class="brand-name">Tandem</span>
+    </a>
+    <nav class="tabs">
+      <a href="/" class="tab {{if eq .Active "chat"}}active{{end}}">Chat</a>
+      <a href="/reminders" class="tab {{if eq .Active "reminders"}}active{{end}}">Reminders</a>
+      <a href="/contacts" class="tab {{if eq .Active "contacts"}}active{{end}}">Contacts</a>
+      <a href="/interactions" class="tab {{if eq .Active "interactions"}}active{{end}}">Interactions</a>
+      <a href="/notes" class="tab {{if eq .Active "notes"}}active{{end}}">Notes</a>
+    </nav>
+    <div class="topbar-sub">{{pretty .Today}}</div>
+  </header>
+{{end}}
+
+{{define "foot"}}
+</body>
+</html>
+{{end}}
+
+{{/* A contact picker; pass (picker $contacts $selectedID). */}}
+{{define "contact_select"}}
+<select name="contact_id" aria-label="Contact">
+  <option value="0">No contact</option>
+  {{$sel := .Selected}}
+  {{range .Contacts}}<option value="{{.ID}}"{{if eq .ID $sel}} selected{{end}}>{{.Name}}</option>{{end}}
+</select>
+{{end}}
+
+{{/* A link to a contact, or nothing. */}}
+{{define "contact_link"}}{{if .ContactID}}<a class="contact-chip" href="/contacts/{{.ContactID}}">{{.ContactName}}</a>{{end}}{{end}}
