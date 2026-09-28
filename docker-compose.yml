@@ -1,0 +1,25 @@
+# Self-host Tandem with Docker Compose:
+#   docker compose up -d
+# then open http://localhost:8090
+services:
+  tandem:
+    build: .
+    image: tandem
+    restart: unless-stopped
+    ports:
+      # Reachable only from this computer. There is no login, so to reach it
+      # from other devices change this to "8090:8090" only on a network you
+      # trust, or put it behind a VPN or an authenticating reverse proxy.
+      - "127.0.0.1:8090:8090"
+    environment:
+      # Your timezone decides when "today" rolls over and what "Monday" means.
+      # Use a name from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+      TZ: America/New_York
+      # Optional: enables the chat and makes the in-app key field read-only.
+      # You can instead paste a key in the app (it's saved in the database).
+      # ANTHROPIC_API_KEY: sk-ant-...
+    volumes:
+      - tandem-data:/data
+
+volumes:
+  tandem-data:

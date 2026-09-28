@@ -1,5 +1,8 @@
 # Tandem
 
+[![CI](https://github.com/jwald3/Tandem/actions/workflows/ci.yml/badge.svg)](https://github.com/jwald3/Tandem/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Tandem is a self-hosted personal assistant. You talk to it in a chat window and
 it keeps track of the people in your life and the things you need to do:
 contacts, reminders, interactions and notes, all in a local SQLite file. Under
@@ -8,9 +11,22 @@ the hood it's Claude with tools for reading and writing that data.
 > "I have to meet my coworker Alex Rivera Monday about Atlas."
 
 Tandem creates the contact *Alex Rivera (coworker)* if they don't exist yet,
-then adds a reminder, *Meet with Alex about Atlas*, for **Monday, Sep 28**,
-linked to him. Later, "what do I know about Atlas?" or "when did I last talk to
-Alex?" gets answered from that data.
+then adds a reminder, *Meet with Alex about Atlas*, for the coming Monday,
+linked to them. Later, "what do I know about Atlas?" or "when did I last talk
+to Alex?" gets answered from that data.
+
+![The Chat tab: conversations, a reply from the assistant, and the agenda panel](docs/screenshots/chat.png)
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/contact.png" alt="A contact's page with their reminders, interactions and notes"></td>
+    <td><img src="docs/screenshots/reminders.png" alt="Reminders tab grouped by day"></td>
+  </tr>
+</table>
+
+*Screenshots use the built-in demo data (`-seed-demo`). The chat reply comes
+from a scripted stand-in for the API that makes the same tool calls Claude
+would.*
 
 ## What it tracks
 
@@ -62,6 +78,17 @@ To build a standalone binary:
 go build -o tandem .
 ./tandem
 ```
+
+### Docker
+
+```sh
+docker compose up -d
+```
+
+Then open <http://localhost:8090>. Data lives in the `tandem-data` volume. Set
+`TZ` in `docker-compose.yml` to your timezone, since it decides what "today"
+and "Monday" mean. The compose file only publishes the port to this computer;
+see the security note below before changing that.
 
 ## Configuration
 
@@ -148,6 +175,8 @@ web/
   assets.go           embeds the two folders below into the binary
   templates/          one template file per page, plus shared row partials
   static/             style.css, app.js, vendored htmx.min.js
+docs/screenshots/     README images (captured from -seed-demo data)
+.github/              CI workflow, issue and PR templates
 ```
 
 The stack: Go standard library `net/http` and `html/template`,
@@ -167,3 +196,14 @@ go vet ./... && gofmt -l .       # lint; gofmt should print nothing
 
 Database files are git-ignored because they hold your personal data and
 possibly your API key. Don't commit them.
+
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for setup, the checks CI runs, and where things live in the code. Please report
+security issues privately as described in [SECURITY.md](SECURITY.md), and
+follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+MIT, see [`LICENSE`](LICENSE).
